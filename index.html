@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Telehealth Chatbot</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+
+        #chatContainer {
+            width: 400px;
+            height: 500px;
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            display: none; /* Hide by default */
+            z-index: 9;
+        }
+
+        #chatContainer.visible {
+            display: block; /* Show when it has 'visible' class */
+        }
+
+        #chatLog {
+            height: 400px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #userInputContainer {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            background-color: #1e72b9;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            background-color: #155a8a;
+        }
+
+        #chatBubble {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #1e72b9;
+            color: white;
+            padding: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+      /* Full width for message wrappers */
+.messageWrapper {
+    width: 100%; /* Ensure the wrapper takes full width */
+    padding: 5px 10px; /* Adjust padding as needed */
+   
+}
+
+/* Right alignment for user messages */
+.user .messageWrapper {
+    justify-content: flex-end; /* Aligns the content (the message bubble) to the right */
+}
+
+/* Left alignment for bot messages (optional, since this is default behavior) */
+.bot .messageWrapper {
+    justify-content: flex-start; /* Aligns the content (the message bubble) to the left */
+}
+
+
+/* Styles for the message title and metadata */
+.chatTitle, .chatMeta {
+    display: block; /* Ensures these elements are on their own line */
+    margin: 1px 0; /* Adds a small margin for spacing */
+    font-size: 0.75em;
+    
+}
+
+/* Specifically styles the chat message for user with a background color, padding, and rounded corners */
+.user .chatMessage {
+    background-color: #1e72b9; /* Blue background for user messages */
+    color: white; /* White text for contrast */
+    padding: 8px 12px; /* Padding inside the message bubble */
+    border-radius: 20px; /* Rounded corners for the bubble */
+    max-width: 80%; /* Limits the width of the message to prevent overly wide bubbles */
+    word-wrap: break-word; /* Ensures long words do not extend the bubble */
+    margin: 0 auto 0 0; /* Aligns the bubble to the right */
+}
+
+.bot .chatMessage {
+    background-color: #f1f1f1; /* Light background for bot messages */
+    color: black; /* Black text for readability */
+    padding: 8px 12px;
+    border-radius: 20px;
+    max-width: 80%;
+    word-wrap: break-word;
+    margin: 0 0 0 auto; /* Aligns the bubble to the left */
+}
+
+
+    </style>
+</head>
+<body>
+    <div id="chatBubble" onclick="toggleChat()">
+        <i class="fas fa-comment"></i>
+    </div>
+    <div id="chatContainer">
+        <div id="chatLog"></div>
+        <div id="userInputContainer">
+            <input type="text" id="userInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        function getTimeStamp() {
+            const now = new Date();
+            return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function toggleChat() {
+            $('#chatContainer').toggleClass('visible');
+        }
+function calculateMaxWidth(length) {
+    const minWidth = 10; // Minimum width for very short messages
+    const maxWidth = 100; // Maximum width for long messages
+    const maxLength = 37; // Length at which max width is reached
+
+    // Calculate the width increment per character
+    const widthPerChar = (maxWidth - minWidth ) / maxLength;
+
+    // Calculate the dynamic width based on the message length
+    let dynamicWidth = minWidth + (length  * widthPerChar);
+
+    // Ensure the width is not less than the minimum or more than the maximum
+    dynamicWidth = Math.max(minWidth, Math.min(maxWidth, dynamicWidth));
+
+    return dynamicWidth;
+}
+        function sendMessage() {
+    const user_input = $('#userInput').val();
+    const timestamp = getTimeStamp();
+    if (user_input.trim() === '') return;
+    
+    // Calculate max width based on message length
+    let maxWidth = calculateMaxWidth(user_input.length);
+
+    const messageWrapper = $(`
+        <div class="messageWrapper user" style="max-width: ${maxWidth}%;">  
+            <span class="chatTitle">You</span>
+            <div class="chatMessage">  
+                <p>${user_input}</p>  
+            </div>  
+            <span class="chatMeta">${timestamp}</span>  
+        </div>
+    `);
+    $('#chatLog').append(messageWrapper); 
+            $.ajax({
+                url: '/chat',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ user_input: user_input }),
+                dataType: 'json',
+                success: function (data) {
+                    const botResponse = $(`
+                        <div class="messageWrapper bot">
+                            <span class="chatTitle">Mindful Assistant</span>
+                            <div class="chatMessage">
+                                <p>${data.response}</p>
+                            </div>
+                            <span class="chatMeta">${getTimeStamp()}</span>
+                        </div>
+                    `);
+                    $('#chatLog').append(botResponse);
+                    $('#chatLog').scrollTop($('#chatLog')[0].scrollHeight);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error("Error:", textStatus, errorThrown);
+                }
+            });
+            $('#userInput').val(''); // Clear the input field
+        }
+    </script>
+</body>
+</html>
